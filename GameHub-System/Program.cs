@@ -1,10 +1,10 @@
 ﻿using GameHub.Models;
 using GameHub.Service;
-using Hub = GameHub.Service.GameHub;
+using Hub = GameHub.Services.GameHubService;
 
 class Program
 {
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
         var projectRoot = Directory.GetCurrentDirectory();
         var dataPath = Path.Combine(projectRoot, "data");
@@ -118,12 +118,12 @@ class Program
             }
 
             Console.WriteLine("\n6. Saving data to 'data/' folder...");
-            hub.Save(dataPath);
+            await hub.SaveAsync(dataPath);
             Console.WriteLine("Data saved successfully");
 
             Console.WriteLine("\n7. Creating new GameHub and loading saved data...");
             var hubLoaded = new Hub(dataPath);
-            hubLoaded.Load(dataPath);
+            await hubLoaded.LoadAsync(dataPath);
             Console.WriteLine("Data loaded successfully");
 
             Console.WriteLine("\n8. ANALYTICS AFTER LOAD (VERIFICATION):");

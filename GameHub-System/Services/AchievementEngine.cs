@@ -1,11 +1,12 @@
 ﻿using GameHub.Events;
 using GameHub.Models;
 using GameHub.Services;
+using GameHub.Interfaces;
 using static GameHub.Services.GameHubService;
 
 namespace GameHub.Service;
 
-public class AchievementEngine
+public class AchievementEngine : IAchievementEngine
 {
     Dictionary<string, AchievementRule> _rules;
     GameHubService _hub;

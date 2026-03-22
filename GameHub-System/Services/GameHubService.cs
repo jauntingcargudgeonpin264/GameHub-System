@@ -2,9 +2,10 @@
 
 using GameHub.Models;
 using GameHub.Events;
+using GameHub.Interfaces;
 namespace GameHub.Services;
 
-public class GameHubService
+public class GameHubService : IGameHubService
 {
     public delegate bool AchievementRule(GameHubService hub, int userId, out string reason);
 
@@ -47,46 +48,44 @@ public class GameHubService
         _telemetry = new List<TelemetryEvent>();
     }
 
-    public void Save(string folderPath)
+    public async Task SaveAsync(string folderPath)
     {
         _dataFolderPath = folderPath;
         if (!Directory.Exists(folderPath))
             Directory.CreateDirectory(folderPath);
 
-        void WriteJsonFile(string filePath, string jsonContent)
+        async Task WriteJsonFile(string filePath, string jsonContent)
         {
-            using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read);
-            using var writer = new StreamWriter(fileStream);
-            writer.Write(jsonContent);
+            await File.WriteAllTextAsync(filePath, jsonContent);
         }
 
-        WriteJsonFile(Path.Combine(folderPath, FileNameGames), JsonSerializer.Serialize(_games, WriteOptions));
-        WriteJsonFile(Path.Combine(folderPath, FileNameUsers), JsonSerializer.Serialize(_users, WriteOptions));
-        WriteJsonFile(Path.Combine(folderPath, FileNamePlaySessions), JsonSerializer.Serialize(_playSessions, WriteOptions));
-        WriteJsonFile(Path.Combine(folderPath, FileNameAchievements), JsonSerializer.Serialize(_achievements, WriteOptions));
-        WriteJsonFile(Path.Combine(folderPath, FileNameUnlocks), JsonSerializer.Serialize(_unlocks, WriteOptions));
-        WriteJsonFile(Path.Combine(folderPath, FileNameTelemetry), JsonSerializer.Serialize(_telemetry, WriteOptions));
+        await WriteJsonFile(Path.Combine(folderPath, FileNameGames), JsonSerializer.Serialize(_games, WriteOptions));
+        await WriteJsonFile(Path.Combine(folderPath, FileNameUsers), JsonSerializer.Serialize(_users, WriteOptions));
+        await WriteJsonFile(Path.Combine(folderPath, FileNamePlaySessions), JsonSerializer.Serialize(_playSessions, WriteOptions));
+        await WriteJsonFile(Path.Combine(folderPath, FileNameAchievements), JsonSerializer.Serialize(_achievements, WriteOptions));
+        await WriteJsonFile(Path.Combine(folderPath, FileNameUnlocks), JsonSerializer.Serialize(_unlocks, WriteOptions));
+        await WriteJsonFile(Path.Combine(folderPath, FileNameTelemetry), JsonSerializer.Serialize(_telemetry, WriteOptions));
     }
 
-    public void Load(string folderPath)
+    public async Task LoadAsync(string folderPath)
     {
         _dataFolderPath = folderPath;
         if (!Directory.Exists(folderPath)) { Directory.CreateDirectory(folderPath); return; }
 
-        T? ReadJson<T>(string fileName) where T : class
+        async Task<T?> ReadJson<T>(string fileName) where T : class
         {
             var path = Path.Combine(folderPath, fileName);
-            return File.Exists(path)
-                ? JsonSerializer.Deserialize<T>(File.ReadAllText(path), ReadOptions)
-                : null;
+            if (!File.Exists(path)) return null;
+            var json = await File.ReadAllTextAsync(path);
+            return JsonSerializer.Deserialize<T>(json, ReadOptions);
         }
 
-        _games = ReadJson<List<Game>>(FileNameGames) ?? new();
-        _users = ReadJson<List<User>>(FileNameUsers) ?? new();
-        _playSessions = ReadJson<List<PlaySession>>(FileNamePlaySessions) ?? new();
-        _achievements = ReadJson<List<Achievement>>(FileNameAchievements) ?? new();
-        _unlocks = ReadJson<List<Unlock>>(FileNameUnlocks) ?? new();
-        _telemetry = ReadJson<List<TelemetryEvent>>(FileNameTelemetry) ?? new();
+        _games = await ReadJson<List<Game>>(FileNameGames) ?? new();
+        _users = await ReadJson<List<User>>(FileNameUsers) ?? new();
+        _playSessions = await ReadJson<List<PlaySession>>(FileNamePlaySessions) ?? new();
+        _achievements = await ReadJson<List<Achievement>>(FileNameAchievements) ?? new();
+        _unlocks = await ReadJson<List<Unlock>>(FileNameUnlocks) ?? new();
+        _telemetry = await ReadJson<List<TelemetryEvent>>(FileNameTelemetry) ?? new();
     }
 
     private void LogTelemetry(string eventType, int userId, string details = "")
