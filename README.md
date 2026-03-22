@@ -1,61 +1,81 @@
-# 🎮 GameHub — Game Library · Achievements · Telemetry
+# 🎮 GameHub System
 
-[![.NET 10](https://img.shields.io/badge/.NET-10.0-blueviolet)](https://dotnet.microsoft.com/)
+[![.NET 8](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/)
 [![Language](https://img.shields.io/badge/language-C%23-239120?logo=csharp)](https://learn.microsoft.com/en-us/dotnet/csharp/)
-[![Paradigm](https://img.shields.io/badge/paradigm-OOP%20%2B%20LINQ-blue)]()
-[![Storage](https://img.shields.io/badge/persistence-JSON%20%2F%20System.Text.Json-orange)]()
+[![Tests](https://img.shields.io/badge/tests-xUnit-blue)](https://xunit.net/)
+[![Patterns](https://img.shields.io/badge/patterns-Observer%20%7C%20Rule%20Engine%20%7C%20Service%20Layer-orange)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
 ## 📖 Overview
 
-**GameHub** is a feature-rich in-memory game library management system built entirely in C# (.NET 10). It models a real-world gaming platform with user tracking, play sessions, an achievement system driven by custom delegate-based rules, and a full telemetry pipeline — all persisted to and restored from structured JSON files.
+**GameHub System** is an in-memory game library management system built in C# (.NET 8). It models a real-world gaming platform with user tracking, play sessions, a delegate-based achievement engine, and a full telemetry pipeline — all persisted to and restored from structured JSON files asynchronously.
 
-The project demonstrates mastery of five core C# pillars:
+The project demonstrates practical command of core C# and .NET concepts:
 
 | Pillar | What's covered |
 |---|---|
-| **Collections & Models** | Strongly typed domain entities, in-memory storage via `List<T>` |
-| **LINQ** | Complex aggregations, groupings, joins, projections |
+| **Domain Modeling** | Strongly typed entities, enums, value defaults |
+| **Collections & LINQ** | Aggregations, projections, set operations, ordering |
 | **Events & Telemetry** | `EventHandler<TEventArgs>`, custom `EventArgs`, event log |
-| **Delegates as Rules** | `delegate bool AchievementRule(...)`, pluggable rule engine |
-| **JSON Persistence** | Full save/load with `System.Text.Json`, safe continuation of IDs |
+| **Delegate Rule Engine** | `delegate bool AchievementRule(...)`, pluggable rule registry |
+| **Interfaces** | `IGameHubService`, `IAchievementEngine` — decoupled contracts |
+| **Async I/O** | `SaveAsync` / `LoadAsync` via `File.WriteAllTextAsync` |
+| **JSON Persistence** | `System.Text.Json`, `static readonly` options, safe load |
+| **Unit Testing** | xUnit, 8 test cases covering core business logic |
+
+---
 
 ## 🏗️ Architecture
 
 ```
-GameHub/
-├── models/
+GameHub-System/
+├── Models/
 │   ├── Game.cs                  # Game entity (Id, Title, Genre, Price)
 │   ├── User.cs                  # User entity (Id, Name)
-│   ├── PlaySession.cs           # Session (UserId, GameId, Start, End)
+│   ├── PlaySession.cs           # Session (UserId, GameId, StartTime, EndTime)
 │   ├── Achievement.cs           # Achievement (Code, Name, Points)
-│   └── Unlock.cs                # Unlock record (UserId, Code, Time)
+│   └── Unlock.cs                # Unlock record (UserId, AchievementCode, UnlockDate)
 │
-├── Service/
-│   ├── GameHub.cs               # Core service — collections, LINQ, events, Save/Load
-│   ├── AchievementEngine.cs     # Delegate-based rule engine
-│   └── EventArgs/
-│       ├── SessionEventArgs.cs          # UserId, GameId, Time
-│       └── AchievementUnlockedEventArgs.cs  # UserId, Code, Points, Time
+├── Events/
+│   ├── SessionEventArgs.cs              # UserId, GameId, Time
+│   ├── AchievementUnlockedEventArgs.cs  # UserId, Achievement, Reason, Time
+│   └── TelemetryEvent.cs               # EventType, UserId, Timestamp, Details
+│
+├── Interfaces/
+│   ├── IGameHubService.cs       # Contract for core service
+│   └── IAchievementEngine.cs    # Contract for rule engine
+│
+├── Services/
+│   ├── GameHubService.cs        # Core service — storage, LINQ, events, async Save/Load
+│   └── AchievementEngine.cs     # Delegate-based rule engine
 │
 ├── data/                        # JSON persistence folder
 │   ├── games.json
 │   ├── users.json
-│   ├── sessions.json
+│   ├── playSessions.json
 │   ├── achievements.json
 │   ├── unlocks.json
-│   └── telemetry.json           # Full event log (Start / End / Unlock)
+│   └── telemetry.json
 │
-└── Program.cs                   # Entry point & demonstration scenarios
+└── Program.cs                   # Entry point & demonstration scenario
+
+GameHub.Tests/
+└── GameHubServiceTests.cs       # xUnit unit tests (8 test cases)
 ```
+
+---
 
 ## 🛠️ Technology Stack
 
-- **Runtime:** .NET 10.0
-- **Language:** C# 13
+- **Runtime:** .NET 8.0
+- **Language:** C# 12
 - **Storage:** In-memory (`List<T>`, `Dictionary<K,V>`)
-- **Serialization:** `System.Text.Json` with `WriteIndented = true`
-- **Patterns:** Service Layer, Rule Engine (Delegate Pattern), Observer (Events)
+- **Serialization:** `System.Text.Json` with `static readonly JsonSerializerOptions`
+- **Async I/O:** `File.WriteAllTextAsync` / `File.ReadAllTextAsync`
+- **Testing:** xUnit
+- **Patterns:** Service Layer, Rule Engine (Delegate), Observer (Events)
+
+---
 
 ## 📦 Domain Models
 
@@ -63,10 +83,10 @@ GameHub/
 ```csharp
 public class Game
 {
-    public int    Id     { get; set; }
-    public string Title  { get; set; }
-    public string Genre  { get; set; }
-    public decimal Price { get; set; }
+    public int       Id    { get; set; }
+    public string    Title { get; set; }
+    public GameGenre Genre { get; set; }
+    public decimal   Price { get; set; }
 }
 ```
 
@@ -83,10 +103,10 @@ public class User
 ```csharp
 public class PlaySession
 {
-    public int      UserId  { get; set; }
-    public int      GameId  { get; set; }
-    public DateTime Start   { get; set; }
-    public DateTime End     { get; set; }   // DateTime.MinValue while active
+    public int      UserId    { get; set; }
+    public int      GameId    { get; set; }
+    public DateTime StartTime { get; set; }
+    public DateTime EndTime   { get; set; }  // default while active
 }
 ```
 
@@ -100,214 +120,132 @@ public class Achievement
 }
 ```
 
-### `Unlock`
-```csharp
-public class Unlock
-{
-    public int      UserId          { get; set; }
-    public string   AchievementCode { get; set; }
-    public DateTime Time            { get; set; }
-}
-```
+---
 
-## ⚙️ GameHub Service
+## ⚙️ GameHubService
 
-The central `GameHub` class acts as the in-memory data store and business logic engine.
+Implements `IGameHubService`. Central service responsible for all storage, business logic, events, and persistence.
 
-### Collections
-```csharp
-public List<Game>        Games        { get; }
-public List<User>        Users        { get; }
-public List<PlaySession> Sessions     { get; }
-public List<Achievement> Achievements { get; }
-public List<Unlock>      Unlocks      { get; }
-```
+### Key Methods
 
-### Management Methods
 | Method | Description |
 |---|---|
-| `AddGame(title, genre, price)` | Registers a new game with auto-incremented ID |
-| `AddUser(name)` | Creates a new user with auto-incremented ID |
-| `AddAchievement(code, name, points)` | Registers a new achievement |
-| `StartSession(userId, gameId)` | Opens a new play session, raises `SessionStarted` |
-| `EndSession(userId, gameId)` | Closes the last active session, raises `SessionEnded` |
+| `AddGame(game)` | Adds a game to the in-memory store |
+| `AddUser(user)` | Registers a new user |
+| `AddAchievement(achievement)` | Registers a new achievement |
+| `StartSession(userId, gameId)` | Opens a play session, fires `SessionStarted` |
+| `EndSession(userId, gameId)` | Closes the last active session, fires `SessionEnded` |
+| `UnlockAchievement(userId, code)` | Unlocks achievement if not already unlocked |
+| `SaveAsync(folderPath)` | Serializes all state to 6 JSON files asynchronously |
+| `LoadAsync(folderPath)` | Restores all state from JSON files asynchronously |
 
-## 🔍 LINQ Analytics
+### LINQ Analytics
 
-All four analytics methods are implemented **exclusively via LINQ** — no loops, no manual aggregation.
+| Method | Returns |
+|---|---|
+| `TotalMinutesByGenre(userId)` | `Dictionary<string, int>` — playtime grouped by genre |
+| `Top3GamesByPlayTime(userId)` | `List<(Game, int minutes)>` — top 3 most played games |
+| `TopUsersByPoints(topN)` | `List<User>` — top N users ranked by achievement points |
+| `AchievementsNotUnlocked(userId)` | `List<Achievement>` — locked achievements for user |
 
-### 1. `TotalMinutesByGenre(int userId)` → `Dictionary<string, int>`
-Groups completed sessions by game genre and sums total playtime in minutes for the specified user.
-
-```csharp
-// Example output:
-// { "RPG" → 120, "FPS" → 45, "Strategy" → 300 }
-```
-
-### 2. `Top3GamesByPlayTime(int userId)` → `List<(Game, int minutes)>`
-Joins sessions with games, aggregates total play time per game, and returns the top 3 ordered descending.
-
-```csharp
-// Example output:
-// [ (Witcher 3, 180), (Minecraft, 95), (Cyberpunk 2077, 60) ]
-```
-
-### 3. `TopUsersByPoints(int topN)` → `List<User>`
-Calculates each user's total achievement score via `Unlocks → Achievements`, then returns the top N users ranked by score.
-
-```csharp
-// Example: topN = 3 → returns 3 highest-scoring users
-```
-
-### 4. `AchievementsNotUnlocked(int userId)` → `List<Achievement>`
-Returns all achievements the given user has **not yet** unlocked, using a set-exclusion pattern.
-
-```csharp
-// Useful for "locked achievements" display in UI
-```
+---
 
 ## 📡 Events & Telemetry
 
-GameHub exposes three typed events forming the telemetry backbone of the system.
-
 ```csharp
-public event EventHandler<SessionEventArgs>            SessionStarted;
-public event EventHandler<SessionEventArgs>            SessionEnded;
+public event EventHandler<SessionEventArgs>             SessionStarted;
+public event EventHandler<SessionEventArgs>             SessionEnded;
 public event EventHandler<AchievementUnlockedEventArgs> AchievementUnlocked;
 ```
 
-### `SessionEventArgs`
+All significant state changes fire typed events. Every `Start`, `End`, and `Unlock` action is automatically logged to `telemetry.json` as a chronological audit trail.
+
+---
+
+## 🏆 Achievement Engine
+
+Implements `IAchievementEngine`. Uses a `Dictionary<string, AchievementRule>` to evaluate pluggable delegate-based rules.
+
+### Rule Delegate
 ```csharp
-public class SessionEventArgs : EventArgs
-{
-    public int      UserId { get; init; }
-    public int      GameId { get; init; }
-    public DateTime Time   { get; init; }
-}
-```
-
-### `AchievementUnlockedEventArgs`
-```csharp
-public class AchievementUnlockedEventArgs : EventArgs
-{
-    public int      UserId          { get; init; }
-    public string   AchievementCode { get; init; }
-    public int      Points          { get; init; }
-    public DateTime Time            { get; init; }
-}
-```
-
-All fired events are automatically serialized into `telemetry.json` as a chronological event log, enabling post-session analytics and audit trails.
-
-## 🏆 Achievement Engine (Delegate Rules)
-
-The `AchievementEngine` uses a pluggable, delegate-driven rule system to automatically evaluate and unlock achievements.
-
-### The Rule Delegate
-```csharp
-public delegate bool AchievementRule(GameHub hub, int userId, out string reason);
-```
-
-### `AchievementEngine` API
-```csharp
-// Register a rule
-engine.Register("FIRST_SESSION", (hub, userId, out reason) => { ... });
-
-// Evaluate all rules for a user — unlocks matching, unearned achievements
-engine.Evaluate(userId);
+public delegate bool AchievementRule(GameHubService hub, int userId, out string reason);
 ```
 
 ### Built-in Rules
 
 | Code | Name | Condition |
 |---|---|---|
-| `FIRST_SESSION` | First Blood | User has completed at least **1** play session |
-| `HOUR_TOTAL` | Marathon Gamer | Total playtime across all games **≥ 60 minutes** |
-| `GENRE_FAN` | Genre Fanatic | **≥ 3 sessions** played in the same genre |
+| `FIRST_SESSION` | First Steps | User completed at least 1 play session |
+| `HOUR_TOTAL` | Marathon Player | Total playtime ≥ 60 minutes |
+| `GENRE_FAN` | Genre Enthusiast | ≥ 3 sessions in the same genre |
 
-> Adding new achievements requires zero changes to `GameHub` — simply register a new `AchievementRule` delegate in `AchievementEngine`. The engine is fully open for extension.
+New rules can be added without modifying `GameHubService` — fully open for extension.
 
-## 💾 JSON Persistence
+---
 
-### `Save(string folderPath)`
-
-Serializes the entire hub state to 6 JSON files. Uses `WriteIndented = true` for human-readable output.
-
-```
-data/
-├── games.json
-├── users.json
-├── sessions.json
-├── achievements.json
-├── unlocks.json
-└── telemetry.json    ← full chronological event log
-```
-
-### `Load(string folderPath)`
-
-Restores all collections from disk. Guarantees:
-- **No crash** if files are missing — starts fresh silently.
-- **No ID collisions** — auto-increment counters are recalculated from loaded data (`Max(Id) + 1`).
-- **Seamless continuation** — after loading, all operations (sessions, achievements, new entities) work identically to a fresh start.
+## 💾 Async JSON Persistence
 
 ```csharp
-var hub = new GameHub();
-hub.Load("data/");
+// Save entire state
+await hub.SaveAsync("data/");
 
-// Continue exactly where you left off
-hub.StartSession(userId: 1, gameId: 3);
+// Restore entire state
+await hub.LoadAsync("data/");
 ```
+
+- Uses `File.WriteAllTextAsync` / `File.ReadAllTextAsync`
+- `static readonly JsonSerializerOptions` — reused across all calls
+- Safe load: missing files are silently skipped, collections default to empty
+- Generic local function `ReadJson<T>` eliminates repetition in `LoadAsync`
+
+---
+
+## 🧪 Unit Tests (xUnit)
+
+8 test cases covering core business logic:
+
+| Test | What it verifies |
+|---|---|
+| `AddGame_ShouldStoreGame` | Game is stored and retrievable by Id |
+| `StartSession_And_EndSession_ShouldCreateCompletedSession` | Session has EndTime after EndSession |
+| `TopUsersByPoints_ShouldReturnUsersOrderedByPoints` | Ranking is correct |
+| `AchievementsNotUnlocked_ShouldReturnOnlyLocked` | Locked filter works correctly |
+| `HasUserUnlockedAchievement_ShouldReturnTrueAfterUnlock` | Unlock is persisted |
+| `UnlockAchievement_ShouldNotDuplicate` | Second unlock is ignored |
+| `SaveAsync_And_LoadAsync_ShouldPersistData` | Data survives save/load cycle |
+
+```bash
+dotnet test
+# Passed: 8, Failed: 0
+```
+
+---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- [.NET 8 SDK](https://dotnet.microsoft.com/download)
 
-### Run the Project
+### Run
 
 ```bash
-git clone https://github.com/korolslava/exam_cs_24_1.git
-cd exam_cs_24_1
-dotnet run
+git clone https://github.com/korolslava/GameHub-System.git
+cd GameHub-System
+dotnet run --project GameHub-System
 ```
 
-The `Program.cs` entry point demonstrates a full end-to-end scenario:
-1. Creates games, users, and achievements
-2. Simulates play sessions (start → end)
-3. Runs the `AchievementEngine` to evaluate rules
-4. Prints LINQ analytics to the console
-5. Saves full state to `data/` folder
-6. Reloads and continues with a new session to verify persistence
+### Run Tests
 
-## 📊 Sample Output
-
+```bash
+dotnet test
 ```
-[TELEMETRY] SessionStarted  → User 1 started 'The Witcher 3' at 14:00:00
-[TELEMETRY] SessionEnded    → User 1 ended  'The Witcher 3' at 15:30:00 (90 min)
-[ACHIEVEMENT] 🏆 FIRST_SESSION unlocked for User 1! (+10 pts)
-[ACHIEVEMENT] 🏆 HOUR_TOTAL   unlocked for User 1! (+50 pts)
 
---- Top 3 Games by Playtime (User 1) ---
-1. The Witcher 3   — 180 min
-2. Cyberpunk 2077  — 95 min
-3. Minecraft       — 60 min
-
---- Total Minutes by Genre (User 1) ---
-RPG      → 275 min
-Sandbox  → 60 min
-
---- Top 3 Users by Points ---
-1. Slava  — 180 pts
-2. Alex   — 110 pts
-3. Maria  — 60 pts
-
-[SAVE] State saved to /data (6 files)
-[LOAD] State restored. Continuing...
-```
+---
 
 ## 🧠 Key Design Decisions
 
-- **Delegate-based Rule Engine** — achievement logic is fully decoupled from the core service. New rules are registered at startup, not hardcoded into `GameHub`.
-- **Event-driven Telemetry** — all significant state changes fire typed events. The telemetry log is a side-effect of the event system, not manually maintained.
-- **LINQ-only Analytics** — all four query methods use pure LINQ chains with no imperative loops, showcasing expressive, declarative query composition.
-- **Safe Persistence** — the Save/Load cycle is idempotent: load → work → save → load again always produces a consistent, non-duplicated state.
+- **`static readonly JsonSerializerOptions`** — single instance reused across all serialization calls instead of allocating a new object per method
+- **`internal RaiseAchievementUnlocked`** — event firing is encapsulated, not exposed as a public API
+- **Telemetry logged once** — unlock is logged in `AddUnlock`, not duplicated in the event handler
+- **Generic `ReadJson<T>` local function** — eliminates 6 identical deserialize blocks in `LoadAsync`
+- **Interface contracts** — `IGameHubService` and `IAchievementEngine` decouple consumers from implementation, enabling unit testing and future substitution
