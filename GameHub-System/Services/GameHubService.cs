@@ -1,11 +1,12 @@
 ﻿using System.Text.Json;
 
 using GameHub.Models;
-namespace GameHub.Service;
+using GameHub.Events;
+namespace GameHub.Services;
 
-public class GameHub
+public class GameHubService
 {
-    public delegate bool AchievementRule(GameHub hub, int userId, out string reason);
+    public delegate bool AchievementRule(GameHubService hub, int userId, out string reason);
 
     List<Game> _games;
     List<User> _users;
@@ -23,11 +24,14 @@ public class GameHub
     const string FileNameUnlocks = "unlocks.json";
     const string FileNameTelemetry = "telemetry.json";
 
+    private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions ReadOptions = new() { PropertyNameCaseInsensitive = true };
+
     public event EventHandler<SessionEventArgs> SessionStarted;
     public event EventHandler<SessionEventArgs> SessionEnded;
     public event EventHandler<AchievementUnlockedEventArgs> AchievementUnlocked;
 
-    public GameHub(string dataFolderPath = "data")
+    public GameHubService(string dataFolderPath = "data")
     {
         _dataFolderPath = dataFolderPath;
         if (!Directory.Exists(_dataFolderPath))
@@ -46,130 +50,60 @@ public class GameHub
     public void Save(string folderPath)
     {
         _dataFolderPath = folderPath;
-
         if (!Directory.Exists(folderPath))
-        {
             Directory.CreateDirectory(folderPath);
-        }
-
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true
-        };
 
         void WriteJsonFile(string filePath, string jsonContent)
         {
-            using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read))
-            using (var writer = new StreamWriter(fileStream))
-            {
-                writer.Write(jsonContent);
-            }
+            using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read);
+            using var writer = new StreamWriter(fileStream);
+            writer.Write(jsonContent);
         }
 
-        var gameFilePath = Path.Combine(folderPath, FileNameGames);
-        var gamesJson = JsonSerializer.Serialize(_games, options);
-        WriteJsonFile(gameFilePath, gamesJson);
-
-        var userFilePath = Path.Combine(folderPath, FileNameUsers);
-        var usersJson = JsonSerializer.Serialize(_users, options);
-        WriteJsonFile(userFilePath, usersJson);
-
-        var sessionFilePath = Path.Combine(folderPath, FileNamePlaySessions);
-        var sessionsJson = JsonSerializer.Serialize(_playSessions, options);
-        WriteJsonFile(sessionFilePath, sessionsJson);
-
-        var achievementFilePath = Path.Combine(folderPath, FileNameAchievements);
-        var achievementsJson = JsonSerializer.Serialize(_achievements, options);
-        WriteJsonFile(achievementFilePath, achievementsJson);
-
-        var unlockFilePath = Path.Combine(folderPath, FileNameUnlocks);
-        var unlocksJson = JsonSerializer.Serialize(_unlocks, options);
-        WriteJsonFile(unlockFilePath, unlocksJson);
-
-        var telemetryFilePath = Path.Combine(folderPath, FileNameTelemetry);
-        var telemetryJson = JsonSerializer.Serialize(_telemetry, options);
-        WriteJsonFile(telemetryFilePath, telemetryJson);
+        WriteJsonFile(Path.Combine(folderPath, FileNameGames), JsonSerializer.Serialize(_games, WriteOptions));
+        WriteJsonFile(Path.Combine(folderPath, FileNameUsers), JsonSerializer.Serialize(_users, WriteOptions));
+        WriteJsonFile(Path.Combine(folderPath, FileNamePlaySessions), JsonSerializer.Serialize(_playSessions, WriteOptions));
+        WriteJsonFile(Path.Combine(folderPath, FileNameAchievements), JsonSerializer.Serialize(_achievements, WriteOptions));
+        WriteJsonFile(Path.Combine(folderPath, FileNameUnlocks), JsonSerializer.Serialize(_unlocks, WriteOptions));
+        WriteJsonFile(Path.Combine(folderPath, FileNameTelemetry), JsonSerializer.Serialize(_telemetry, WriteOptions));
     }
 
     public void Load(string folderPath)
     {
         _dataFolderPath = folderPath;
+        if (!Directory.Exists(folderPath)) { Directory.CreateDirectory(folderPath); return; }
 
-        if (!Directory.Exists(folderPath))
+        T? ReadJson<T>(string fileName) where T : class
         {
-            Directory.CreateDirectory(folderPath);
-            return;
+            var path = Path.Combine(folderPath, fileName);
+            return File.Exists(path)
+                ? JsonSerializer.Deserialize<T>(File.ReadAllText(path), ReadOptions)
+                : null;
         }
 
-        var options = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        };
-
-        var gameFilePath = Path.Combine(folderPath, FileNameGames);
-        if (File.Exists(gameFilePath))
-        {
-            var gamesJson = File.ReadAllText(gameFilePath);
-            _games = JsonSerializer.Deserialize<List<Game>>(gamesJson, options) ?? new List<Game>();
-        }
-
-        var userFilePath = Path.Combine(folderPath, FileNameUsers);
-        if (File.Exists(userFilePath))
-        {
-            var usersJson = File.ReadAllText(userFilePath);
-            _users = JsonSerializer.Deserialize<List<User>>(usersJson, options) ?? new List<User>();
-        }
-
-        var sessionFilePath = Path.Combine(folderPath, FileNamePlaySessions);
-        if (File.Exists(sessionFilePath))
-        {
-            var sessionsJson = File.ReadAllText(sessionFilePath);
-            _playSessions = JsonSerializer.Deserialize<List<PlaySession>>(sessionsJson, options) ?? new List<PlaySession>();
-        }
-
-        var achievementFilePath = Path.Combine(folderPath, FileNameAchievements);
-        if (File.Exists(achievementFilePath))
-        {
-            var achievementsJson = File.ReadAllText(achievementFilePath);
-            _achievements = JsonSerializer.Deserialize<List<Achievement>>(achievementsJson, options) ?? new List<Achievement>();
-        }
-
-        var unlockFilePath = Path.Combine(folderPath, FileNameUnlocks);
-        if (File.Exists(unlockFilePath))
-        {
-            var unlocksJson = File.ReadAllText(unlockFilePath);
-            _unlocks = JsonSerializer.Deserialize<List<Unlock>>(unlocksJson, options) ?? new List<Unlock>();
-        }
-
-        var telemetryFilePath = Path.Combine(folderPath, FileNameTelemetry);
-        if (File.Exists(telemetryFilePath))
-        {
-            var telemetryJson = File.ReadAllText(telemetryFilePath);
-            _telemetry = JsonSerializer.Deserialize<List<TelemetryEvent>>(telemetryJson, options) ?? new List<TelemetryEvent>();
-        }
+        _games = ReadJson<List<Game>>(FileNameGames) ?? new();
+        _users = ReadJson<List<User>>(FileNameUsers) ?? new();
+        _playSessions = ReadJson<List<PlaySession>>(FileNamePlaySessions) ?? new();
+        _achievements = ReadJson<List<Achievement>>(FileNameAchievements) ?? new();
+        _unlocks = ReadJson<List<Unlock>>(FileNameUnlocks) ?? new();
+        _telemetry = ReadJson<List<TelemetryEvent>>(FileNameTelemetry) ?? new();
     }
 
     private void LogTelemetry(string eventType, int userId, string details = "")
     {
-        var telemetryEvent = new TelemetryEvent
+        _telemetry.Add(new TelemetryEvent
         {
             EventType = eventType,
             UserId = userId,
             Timestamp = DateTime.Now,
             Details = details
-        };
-        _telemetry.Add(telemetryEvent);
+        });
     }
 
     public void AddGame(Game game)
     {
         _games.Add(game);
-
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true
-        };
-        var jsonString = JsonSerializer.Serialize(_games, options);
+        var jsonString = JsonSerializer.Serialize(_games, WriteOptions);
         var filePath = Path.Combine(_dataFolderPath, FileNameGames);
         File.WriteAllText(filePath, jsonString);
     }
@@ -177,12 +111,7 @@ public class GameHub
     public void AddUser(User user)
     {
         _users.Add(user);
-
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true
-        };
-        var jsonString = JsonSerializer.Serialize(_users, options);
+        var jsonString = JsonSerializer.Serialize(_users, WriteOptions);
         var filePath = Path.Combine(_dataFolderPath, FileNameUsers);
         File.WriteAllText(filePath, jsonString);
     }
@@ -190,12 +119,7 @@ public class GameHub
     public void AddAchievement(Achievement achievement)
     {
         _achievements.Add(achievement);
-
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true
-        };
-        var jsonString = JsonSerializer.Serialize(_achievements, options);
+        var jsonString = JsonSerializer.Serialize(_achievements, WriteOptions);
         var filePath = Path.Combine(_dataFolderPath, FileNameAchievements);
         File.WriteAllText(filePath, jsonString);
     }
@@ -203,38 +127,18 @@ public class GameHub
     public void AddUnlock(Unlock unlock)
     {
         _unlocks.Add(unlock);
-
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true
-        };
-        var jsonString = JsonSerializer.Serialize(_unlocks, options);
+        var jsonString = JsonSerializer.Serialize(_unlocks, WriteOptions);
         var filePath = Path.Combine(_dataFolderPath, FileNameUnlocks);
         File.WriteAllText(filePath, jsonString);
-
         LogTelemetry("Unlock", unlock.UserId, unlock.AchievementCode);
     }
 
     public void StartSession(int userId, int gameId)
     {
-        var session = new PlaySession
-        {
-            UserId = userId,
-            GameId = gameId,
-            StartTime = DateTime.Now
-        };
-        _playSessions.Add(session);
-
-        var args = new SessionEventArgs { UserId = userId, GameId = gameId };
-        SessionStarted?.Invoke(this, args);
-
+        _playSessions.Add(new PlaySession { UserId = userId, GameId = gameId, StartTime = DateTime.Now });
+        SessionStarted?.Invoke(this, new SessionEventArgs { UserId = userId, GameId = gameId });
         LogTelemetry("Start", userId, $"GameId: {gameId}");
-
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true
-        };
-        var jsonString = JsonSerializer.Serialize(_playSessions, options);
+        var jsonString = JsonSerializer.Serialize(_playSessions, WriteOptions);
         var filePath = Path.Combine(_dataFolderPath, FileNamePlaySessions);
         File.WriteAllText(filePath, jsonString);
     }
@@ -242,23 +146,14 @@ public class GameHub
     public void EndSession(int userId, int gameId)
     {
         var session = _playSessions.FindLast(s => s.UserId == userId && s.GameId == gameId && s.EndTime == default);
-        if (session != null)
-        {
-            session.EndTime = DateTime.Now;
+        if (session is null) return;
 
-            var args = new SessionEventArgs { UserId = userId, GameId = gameId };
-            SessionEnded?.Invoke(this, args);
-
-            LogTelemetry("End", userId, $"GameId: {gameId}");
-
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true
-            };
-            var jsonString = JsonSerializer.Serialize(_playSessions, options);
-            var filePath = Path.Combine(_dataFolderPath, FileNamePlaySessions);
-            File.WriteAllText(filePath, jsonString);
-        }
+        session.EndTime = DateTime.Now;
+        SessionEnded?.Invoke(this, new SessionEventArgs { UserId = userId, GameId = gameId });
+        LogTelemetry("End", userId, $"GameId: {gameId}");
+        var jsonString = JsonSerializer.Serialize(_playSessions, WriteOptions);
+        var filePath = Path.Combine(_dataFolderPath, FileNamePlaySessions);
+        File.WriteAllText(filePath, jsonString);
     }
 
     public Dictionary<string, int> TotalMinutesByGenre(int userId)
@@ -383,34 +278,8 @@ public class GameHub
         return _games.Find(g => g.Id == gameId);
     }
 
-    public void RaiseAchievementUnlocked(object sender, AchievementUnlockedEventArgs args)
+    internal void RaiseAchievementUnlocked(object sender, AchievementUnlockedEventArgs args)
     {
         AchievementUnlocked?.Invoke(sender, args);
-        LogTelemetry("Unlock", args.UserId, args.AchievementCode);
     }
-}
-
-public class SessionEventArgs
-{
-    public int UserId { get; set; }
-    public int GameId { get; set; }
-    public DateTime Time { get; set; } = DateTime.Now;
-}
-
-public class AchievementUnlockedEventArgs
-{
-    public int UserId { get; set; }
-    public string AchievementCode { get; set; } = string.Empty;
-    public int Points { get; set; }
-    public DateTime Time { get; set; } = DateTime.Now;
-    public Achievement? Achievement { get; set; }
-    public string Reason { get; set; } = string.Empty;
-}
-
-public class TelemetryEvent
-{
-    public string EventType { get; set; } = string.Empty;
-    public int UserId { get; set; }
-    public DateTime Timestamp { get; set; }
-    public string Details { get; set; } = string.Empty;
 }

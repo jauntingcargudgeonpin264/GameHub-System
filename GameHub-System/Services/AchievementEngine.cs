@@ -1,13 +1,16 @@
-﻿using GameHub.Models;
-using static GameHub.Service.GameHub;
+﻿using GameHub.Events;
+using GameHub.Models;
+using GameHub.Services;
+using static GameHub.Services.GameHubService;
+
 namespace GameHub.Service;
 
 public class AchievementEngine
 {
     Dictionary<string, AchievementRule> _rules;
-    GameHub _hub;
+    GameHubService _hub;
 
-    public AchievementEngine(GameHub hub)
+    public AchievementEngine(GameHubService hub)
     {
         _hub = hub;
         _rules = new Dictionary<string, AchievementRule>
@@ -39,7 +42,7 @@ public class AchievementEngine
         }
     }
 
-    private bool IsFirstSession(GameHub hub, int userId, out string reason)
+    private bool IsFirstSession(GameHubService hub, int userId, out string reason)
     {
         reason = string.Empty;
         var userSessions = hub.GetUserSessions(userId);
@@ -51,7 +54,7 @@ public class AchievementEngine
         return false;
     }
 
-    private bool HasTotalHourPlayed(GameHub hub, int userId, out string reason)
+    private bool HasTotalHourPlayed(GameHubService hub, int userId, out string reason)
     {
         reason = string.Empty;
         var userSessions = hub.GetUserSessions(userId);
@@ -73,7 +76,7 @@ public class AchievementEngine
         return false;
     }
 
-    private bool IsGenreFan(GameHub hub, int userId, out string reason)
+    private bool IsGenreFan(GameHubService hub, int userId, out string reason)
     {
         reason = string.Empty;
         var genreMinutes = hub.TotalMinutesByGenre(userId);
