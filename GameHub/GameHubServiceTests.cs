@@ -124,4 +124,61 @@ public class GameHubServiceTests
 
         Assert.NotNull(hub2.GetGameById(1));
     }
+
+    [Fact]
+    public void AddGame_ShouldThrow_WhenGameIsNull()
+    {
+        var hub = CreateHub();
+
+        Assert.Throws<ArgumentNullException>(() => hub.AddGame(null!));
+    }
+
+    [Fact]
+    public void AddGame_ShouldThrow_WhenDuplicateId()
+    {
+        var hub = CreateHub();
+        var game = new Game { Id = 1, Title = "Elden Ring", Genre = GameGenre.Action };
+
+        hub.AddGame(game);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            hub.AddGame(new Game { Id = 1, Title = "Another Game", Genre = GameGenre.RPG }));
+    }
+
+    [Fact]
+    public void AddUser_ShouldThrow_WhenDuplicateId()
+    {
+        var hub = CreateHub();
+        hub.AddUser(new User { Id = 1, Name = "Alice" });
+
+        Assert.Throws<InvalidOperationException>(() =>
+            hub.AddUser(new User { Id = 1, Name = "Bob" }));
+    }
+
+    [Fact]
+    public void StartSession_ShouldThrow_WhenUserNotFound()
+    {
+        var hub = CreateHub();
+        hub.AddGame(new Game { Id = 1, Title = "Elden Ring", Genre = GameGenre.Action });
+
+        Assert.Throws<InvalidOperationException>(() => hub.StartSession(99, 1));
+    }
+
+    [Fact]
+    public void StartSession_ShouldThrow_WhenGameNotFound()
+    {
+        var hub = CreateHub();
+        hub.AddUser(new User { Id = 1, Name = "Alice" });
+
+        Assert.Throws<InvalidOperationException>(() => hub.StartSession(1, 99));
+    }
+
+    [Fact]
+    public void UnlockAchievement_ShouldThrow_WhenUserNotFound()
+    {
+        var hub = CreateHub();
+        hub.AddAchievement(new Achievement { Code = "ACH1", Name = "First", Points = 10 });
+
+        Assert.Throws<InvalidOperationException>(() => hub.UnlockAchievement(99, "ACH1"));
+    }
 }
