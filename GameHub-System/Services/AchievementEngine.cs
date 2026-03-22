@@ -4,7 +4,7 @@ using GameHub.Services;
 using GameHub.Interfaces;
 using static GameHub.Services.GameHubService;
 
-namespace GameHub.Service;
+namespace GameHub.Services;
 
 public class AchievementEngine : IAchievementEngine
 {

@@ -1,6 +1,5 @@
 ﻿using GameHub.Models;
-using GameHub.Service;
-using Hub = GameHub.Services.GameHubService;
+using GameHub.Services;
 
 class Program
 {
@@ -15,7 +14,7 @@ class Program
 
         try
         {
-            var hub = new Hub(dataPath);
+            var hub = new GameHubService(dataPath);
             var engine = new AchievementEngine(hub);
 
             hub.AchievementUnlocked += (sender, args) =>
@@ -122,7 +121,7 @@ class Program
             Console.WriteLine("Data saved successfully");
 
             Console.WriteLine("\n7. Creating new GameHub and loading saved data...");
-            var hubLoaded = new Hub(dataPath);
+            var hubLoaded = new GameHubService(dataPath);
             await hubLoaded.LoadAsync(dataPath);
             Console.WriteLine("Data loaded successfully");
 
