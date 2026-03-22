@@ -47,6 +47,10 @@ public class GameHubService : IGameHubService
         _telemetry = new List<TelemetryEvent>();
     }
 
+    /// <summary>
+    /// Serializes all in-memory state to JSON files asynchronously.
+    /// </summary>
+    /// <param name="folderPath">Path to the folder where JSON files will be written.</param>
     public async Task SaveAsync(string folderPath)
     {
         _dataFolderPath = folderPath;
@@ -66,6 +70,11 @@ public class GameHubService : IGameHubService
         await WriteJsonFile(Path.Combine(folderPath, FileNameTelemetry), JsonSerializer.Serialize(_telemetry, WriteOptions));
     }
 
+    /// <summary>
+    /// Restores all state from JSON files asynchronously.
+    /// Missing files are silently skipped.
+    /// </summary>
+    /// <param name="folderPath">Path to the folder containing JSON files.</param>
     public async Task LoadAsync(string folderPath)
     {
         _dataFolderPath = folderPath;
@@ -98,6 +107,12 @@ public class GameHubService : IGameHubService
         });
     }
 
+    /// <summary>
+    /// Adds a new game to the in-memory store and persists it to disk.
+    /// </summary>
+    /// <param name="game">The game to add.</param>
+    /// <exception cref="ArgumentNullException">Thrown when game is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a game with the same Id already exists.</exception>
     public void AddGame(Game game)
     {
         ArgumentNullException.ThrowIfNull(game);
@@ -109,6 +124,12 @@ public class GameHubService : IGameHubService
             JsonSerializer.Serialize(_games, WriteOptions));
     }
 
+    /// <summary>
+    /// Registers a new user in the system and persists it to disk.
+    /// </summary>
+    /// <param name="user">The user to register.</param>
+    /// <exception cref="ArgumentNullException">Thrown when user is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a user with the same Id already exists.</exception>
     public void AddUser(User user)
     {
         ArgumentNullException.ThrowIfNull(user);
@@ -120,6 +141,12 @@ public class GameHubService : IGameHubService
             JsonSerializer.Serialize(_users, WriteOptions));
     }
 
+    /// <summary>
+    /// Registers a new achievement definition.
+    /// </summary>
+    /// <param name="achievement">The achievement to register.</param>
+    /// <exception cref="ArgumentNullException">Thrown when achievement is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when an achievement with the same Code already exists.</exception>
     public void AddAchievement(Achievement achievement)
     {
         ArgumentNullException.ThrowIfNull(achievement);
@@ -140,6 +167,12 @@ public class GameHubService : IGameHubService
         LogTelemetry("Unlock", unlock.UserId, unlock.AchievementCode);
     }
 
+    /// <summary>
+    /// Opens a new play session for the specified user and game. Fires <see cref="SessionStarted"/>.
+    /// </summary>
+    /// <param name="userId">Id of the user starting the session.</param>
+    /// <param name="gameId">Id of the game being played.</param>
+    /// <exception cref="InvalidOperationException">Thrown when user or game not found.</exception>
     public void StartSession(int userId, int gameId)
     {
         if (!_users.Any(u => u.Id == userId))
@@ -154,6 +187,11 @@ public class GameHubService : IGameHubService
             JsonSerializer.Serialize(_playSessions, WriteOptions));
     }
 
+    /// <summary>
+    /// Closes the last active session for the specified user and game. Fires <see cref="SessionEnded"/>.
+    /// </summary>
+    /// <param name="userId">Id of the user ending the session.</param>
+    /// <param name="gameId">Id of the game being played.</param>
     public void EndSession(int userId, int gameId)
     {
         var session = _playSessions.FindLast(s => s.UserId == userId && s.GameId == gameId && s.EndTime == default);
@@ -167,6 +205,10 @@ public class GameHubService : IGameHubService
         File.WriteAllText(filePath, jsonString);
     }
 
+    /// <summary>
+    /// Returns playtime in minutes grouped by game genre for the specified user.
+    /// </summary>
+    /// <param name="userId">Id of the user.</param>
     public Dictionary<string, int> TotalMinutesByGenre(int userId)
     {
         var genreMinutes = new Dictionary<string, int>();
@@ -193,6 +235,10 @@ public class GameHubService : IGameHubService
         return genreMinutes;
     }
 
+    /// <summary>
+    /// Returns the top 3 most played games for the specified user, ordered by total playtime descending.
+    /// </summary>
+    /// <param name="userId">Id of the user.</param>
     public List<(Game game, int minutes)> Top3GamesByPlayTime(int userId)
     {
         var gameMinutes = new Dictionary<int, int>();
@@ -221,6 +267,10 @@ public class GameHubService : IGameHubService
         return top3Games;
     }
 
+    /// <summary>
+    /// Returns the top N users ranked by total achievement points descending.
+    /// </summary>
+    /// <param name="topN">Number of users to return.</param>
     public List<User> TopUsersByPoints(int topN)
     {
         var userPoints = new Dictionary<int, int>();
@@ -248,6 +298,10 @@ public class GameHubService : IGameHubService
         return topUsers;
     }
 
+    /// <summary>
+    /// Returns all achievements the specified user has not yet unlocked.
+    /// </summary>
+    /// <param name="userId">Id of the user.</param>
     public List<Achievement> AchievementsNotUnlocked(int userId)
     {
         var unlockedCodes = _unlocks.Where(u => u.UserId == userId).Select(u => u.AchievementCode).ToHashSet();
@@ -265,6 +319,12 @@ public class GameHubService : IGameHubService
         return _unlocks.Any(u => u.UserId == userId && u.AchievementCode == achievementCode);
     }
 
+    /// <summary>
+    /// Unlocks an achievement for the specified user if not already unlocked.
+    /// </summary>
+    /// <param name="userId">Id of the user.</param>
+    /// <param name="achievementCode">Code of the achievement to unlock.</param>
+    /// <exception cref="InvalidOperationException">Thrown when user or achievement not found.</exception>
     public void UnlockAchievement(int userId, string achievementCode)
     {
         if (!_users.Any(u => u.Id == userId))

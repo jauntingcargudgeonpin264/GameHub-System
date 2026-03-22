@@ -22,6 +22,11 @@ public class AchievementEngine : IAchievementEngine
         };
     }
 
+    /// <summary>
+    /// Evaluates all registered achievement rules for the specified user
+    /// and unlocks any achievements whose conditions are met.
+    /// </summary>
+    /// <param name="userId">Id of the user to evaluate.</param>
     public void Evaluate(int userId)
     {
         foreach (var rule in _rules)
