@@ -1,0 +1,32 @@
+[
+  {
+    "Id": 1,
+    "Title": "Elden Ring",
+    "Genre": 0,
+    "Price": 59.99
+  },
+  {
+    "Id": 2,
+    "Title": "Baldur\u0027s Gate 3",
+    "Genre": 2,
+    "Price": 59.99
+  },
+  {
+    "Id": 3,
+    "Title": "Civilization VI",
+    "Genre": 3,
+    "Price": 49.99
+  },
+  {
+    "Id": 4,
+    "Title": "The Legend of Zelda",
+    "Genre": 1,
+    "Price": 69.99
+  },
+  {
+    "Id": 5,
+    "Title": "Microsoft Flight Simulator",
+    "Genre": 4,
+    "Price": 99.99
+  }
+]

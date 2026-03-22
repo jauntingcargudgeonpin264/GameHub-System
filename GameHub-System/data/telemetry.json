@@ -1,0 +1,74 @@
+[
+  {
+    "EventType": "Start",
+    "UserId": 1,
+    "Timestamp": "2026-01-24T14:07:58.9417813+02:00",
+    "Details": "GameId: 1"
+  },
+  {
+    "EventType": "End",
+    "UserId": 1,
+    "Timestamp": "2026-01-24T14:07:59.4550615+02:00",
+    "Details": "GameId: 1"
+  },
+  {
+    "EventType": "Unlock",
+    "UserId": 1,
+    "Timestamp": "2026-01-24T14:07:59.4602097+02:00",
+    "Details": "FIRST_SESSION"
+  },
+  {
+    "EventType": "Unlock",
+    "UserId": 1,
+    "Timestamp": "2026-01-24T14:07:59.4609021+02:00",
+    "Details": ""
+  },
+  {
+    "EventType": "Start",
+    "UserId": 1,
+    "Timestamp": "2026-01-24T14:07:59.4625968+02:00",
+    "Details": "GameId: 2"
+  },
+  {
+    "EventType": "End",
+    "UserId": 1,
+    "Timestamp": "2026-01-24T14:07:59.9679523+02:00",
+    "Details": "GameId: 2"
+  },
+  {
+    "EventType": "Start",
+    "UserId": 1,
+    "Timestamp": "2026-01-24T14:07:59.9692359+02:00",
+    "Details": "GameId: 3"
+  },
+  {
+    "EventType": "End",
+    "UserId": 1,
+    "Timestamp": "2026-01-24T14:08:00.48358+02:00",
+    "Details": "GameId: 3"
+  },
+  {
+    "EventType": "Start",
+    "UserId": 2,
+    "Timestamp": "2026-01-24T14:08:00.4842761+02:00",
+    "Details": "GameId: 1"
+  },
+  {
+    "EventType": "End",
+    "UserId": 2,
+    "Timestamp": "2026-01-24T14:08:00.985469+02:00",
+    "Details": "GameId: 1"
+  },
+  {
+    "EventType": "Unlock",
+    "UserId": 2,
+    "Timestamp": "2026-01-24T14:08:00.987208+02:00",
+    "Details": "FIRST_SESSION"
+  },
+  {
+    "EventType": "Unlock",
+    "UserId": 2,
+    "Timestamp": "2026-01-24T14:08:00.9873613+02:00",
+    "Details": ""
+  }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "Code": "FIRST_SESSION",
+    "Name": "First Steps",
+    "Points": 10
+  },
+  {
+    "Code": "HOUR_TOTAL",
+    "Name": "Marathon Player",
+    "Points": 25
+  },
+  {
+    "Code": "GENRE_FAN",
+    "Name": "Genre Enthusiast",
+    "Points": 15
+  }
+]
